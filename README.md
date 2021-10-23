@@ -45,3 +45,5 @@ Push json:
 ```bash
 curl -X POST -d @test.json http://localhost:8080/kick
 ```
+
+GL!
