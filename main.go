@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -24,6 +25,7 @@ type Kick struct {
 	Velocity  float64            `json:"velocity,omitempty" bson:"velocity,omitempty"`
 }
 
+/*
 func GetKick(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("content-type", "application/json")
 	params := mux.Vars(request)
@@ -38,6 +40,32 @@ func GetKick(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	json.NewEncoder(response).Encode(kick)
+}
+*/
+
+func GetKicks(response http.ResponseWriter, request *http.Request) {
+	response.Header().Set("content-type", "application/json")
+	var kicks []Kick
+	collection := client.Database("mongodb").Collection("kicks")
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	cursor, err := collection.Find(ctx, bson.M{})
+	if err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+		return
+	}
+	defer cursor.Close(ctx)
+	for cursor.Next(ctx) {
+		var kick Kick
+		cursor.Decode(&kick)
+		kicks = append(kicks, kick)
+	}
+	if err := cursor.Err(); err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+		return
+	}
+	json.NewEncoder(response).Encode(kicks)
 }
 
 func CreateKick(response http.ResponseWriter, request *http.Request) {
